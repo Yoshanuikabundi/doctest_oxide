@@ -1,4 +1,4 @@
-from typing import Union, Iterable, Set, Optional, Dict, List, Any, Sequence
+from typing import Union, Iterable, Optional, Dict, List, Any, Set
 from pathlib import Path
 
 from sphinx.application import Sphinx
@@ -7,9 +7,6 @@ from sphinx.environment import BuildEnvironment
 from sphinx.transforms import SphinxTransform
 
 import docutils.nodes
-
-import pytest
-from _pytest._code.code import ExceptionInfo, TerminalRepr
 
 
 def node_lang_is_python(node: docutils.nodes.literal_block) -> bool:
@@ -163,17 +160,23 @@ def env_merge_info_callback(
 
 
 def write_doctests_callback(app: Sphinx, exception: Optional[Exception]):
+    if isinstance(app.builder, DoctestOxideBuilder):
+        return
+    if not app.config.doctest_oxide_all_builders_write_doctests:
+        return
     if exception is not None:
         return
 
+    write_doctests(app, outdir=Path(app.env.srcdir) / "_doctests")
+
+
+def write_doctests(app: Sphinx, outdir: Path):
     data = app.env.doctest_oxide_data
 
-    outdir = Path(app.env.srcdir) / "_doctests"
     outdir.mkdir(exist_ok=True)
 
     for docname, tests in data.items():
-        path = outdir / f"{docname}.py"
-        path = path.with_name("test_" + path.name)
+        path = get_target_uri(outdir, docname)
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("w") as f:
             for lineno, code in tests.items():
@@ -183,8 +186,45 @@ def write_doctests_callback(app: Sphinx, exception: Optional[Exception]):
                 f.write("\n\n")
 
 
+def get_target_uri(outdir: Union[Path, str], docname: str) -> Path:
+    path = Path(outdir) / f"{docname}.py"
+    path = path.with_name("test_" + path.name)
+    return path
+
+
+class DoctestOxideBuilder(Builder):
+    name = "doctest_oxide"
+    format = ".py"
+    epilog = ""
+    allow_parallel = True
+
+    def init(self) -> None:
+        return super().init()
+
+    def get_outdated_docs(self) -> Union[str, Iterable[str]]:
+        # TODO: Only write outdated docs with the builder
+        return "This builder always writes all doctests (for now)"
+
+    def prepare_writing(self, docnames: Set[str]) -> None:
+        write_doctests(self.app, Path(self.outdir))
+
+    def write_doc(self, docname: str, doctree: docutils.nodes.document) -> None:
+        pass
+
+    def get_target_uri(self, docname: str, typ: str = None) -> str:
+        return str(get_target_uri(self.outdir, docname))
+
+
 def setup(app: Sphinx):
+    app.add_config_value(
+        name="doctest_oxide_all_builders_write_doctests",
+        default=True,
+        rebuild="",
+        types=bool,
+    )
+
     app.add_transform(DoctestOxideTransform)
+    app.add_builder(DoctestOxideBuilder)
     app.connect("env-purge-doc", env_purge_doc_callback)
     app.connect("env-merge-info", env_merge_info_callback)
     app.connect("build-finished", write_doctests_callback)
