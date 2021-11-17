@@ -1,5 +1,7 @@
 from typing import Union, Iterable, Optional, Dict, List, Any, Set
 from pathlib import Path
+import unicodedata
+import re
 
 from sphinx.application import Sphinx
 from sphinx.builders import Builder
@@ -7,6 +9,19 @@ from sphinx.environment import BuildEnvironment
 from sphinx.transforms import SphinxTransform
 
 import docutils.nodes
+
+
+def slugify(value):
+    """
+    Converts to lowercase, removes non-word characters (alphanumerics and
+    underscores) and converts spaces to hyphens. Also strips leading and
+    trailing whitespace.
+    """
+    value = (
+        unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+    )
+    value = re.sub("[^\w\s-]", "", value).strip().lower()
+    return re.sub("[-\s]+", "-", value)
 
 
 def node_lang_is_python(node: docutils.nodes.literal_block) -> bool:
@@ -178,12 +193,13 @@ def write_doctests(app: Sphinx, outdir: Path):
     for docname, tests in data.items():
         path = get_target_uri(outdir, docname)
         path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("w") as f:
-            for lineno, code in tests.items():
-                f.write(f"def test_{docname}_l{lineno}():\n")
-                lines = ["    " + line for line in code.splitlines()]
-                f.write("\n".join(lines))
-                f.write("\n\n")
+        if tests:
+            with path.open("w") as f:
+                for lineno, code in tests.items():
+                    f.write(f"def test_{slugify(docname)}_l{lineno}():\n")
+                    lines = ["    " + line for line in code.splitlines()]
+                    f.write("\n".join(lines))
+                    f.write("\n\n")
 
 
 def get_target_uri(outdir: Union[Path, str], docname: str) -> Path:

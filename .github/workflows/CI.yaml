@@ -68,6 +68,15 @@ jobs:
       run: |
         pytest -v --cov=doctest_oxide --cov-report=xml --color=yes doctest_oxide/tests/
 
+
+    - name: Run tests
+      # conda setup requires this special shell
+      shell: bash -l {0}
+      run: |
+        cd docs
+        make doctest_oxide
+        pytest -v --color=yes _build/doctest_oxide
+
     - name: CodeCov
       uses: codecov/codecov-action@v1
       with:

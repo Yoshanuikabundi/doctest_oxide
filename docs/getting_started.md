@@ -22,11 +22,16 @@ print("hello world")
       raise ValueError("BORKED")
 ``` 
 
-```python
+
+Syntax errors fail pytest with an error message, but it could use some finessing.
+Change this from `text` to `python` to see.
+```text
 this test fails too
 ``` 
 
-```python
+Exceptions fail pytest too.
+Change this from `text` to `python` to see.
+```text
 1
 2
 3
