@@ -5,7 +5,7 @@ doctest_oxide
 [![codecov](https://codecov.io/gh/REPLACE_WITH_OWNER_ACCOUNT/doctest_oxide/branch/master/graph/badge.svg)](https://codecov.io/gh/REPLACE_WITH_OWNER_ACCOUNT/doctest_oxide/branch/master)
 
 
-Sphinx doctests that make sense
+Sphinx doctests for the rest of us
 
 ### Copyright
 
