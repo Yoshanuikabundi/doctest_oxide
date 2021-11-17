@@ -21,7 +21,7 @@ def slugify(value):
         unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
     )
     value = re.sub("[^\w\s-]", "", value).strip().lower()
-    return re.sub("[-\s]+", "-", value)
+    return re.sub("[-\s]+", "_", value)
 
 
 def node_lang_is_python(node: docutils.nodes.literal_block) -> bool:

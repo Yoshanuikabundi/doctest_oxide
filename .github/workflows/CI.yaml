@@ -73,7 +73,7 @@ jobs:
         pytest -v --cov=doctest_oxide --cov-report=xml --color=yes doctest_oxide/tests/
 
 
-    - name: Run tests
+    - name: Run doctests
       # conda setup requires this special shell
       shell: bash -l {0}
       run: |
