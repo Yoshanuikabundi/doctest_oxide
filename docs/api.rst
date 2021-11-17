@@ -2,6 +2,6 @@ API Documentation
 =================
 
 .. autosummary::
-   :toctree: autosummary
+   :toctree: _autosummary
 
    doctest_oxide

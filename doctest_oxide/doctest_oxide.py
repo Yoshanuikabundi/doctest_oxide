@@ -1,8 +1,5 @@
 from typing import Union, Iterable, Set, Optional, Dict, List, Any, Sequence
-import os
-import sys
-import traceback as tb
-from code import compile_command, InteractiveInterpreter
+from pathlib import Path
 
 from sphinx.application import Sphinx
 from sphinx.builders import Builder
@@ -165,78 +162,32 @@ def env_merge_info_callback(
         env.doctest_oxide_data[docname] = other_data[docname]
 
 
-def invoke_pytest_callback(app: Sphinx, exception: Optional[Exception]):
+def write_doctests_callback(app: Sphinx, exception: Optional[Exception]):
     if exception is not None:
         return
 
     data = app.env.doctest_oxide_data
 
-    pytest.main([], plugins=[PytestPlugin(data)])
+    outdir = Path(app.env.srcdir) / "_doctests"
+    outdir.mkdir(exist_ok=True)
 
-
-class DoctestItem(pytest.Item):
-    def __init__(self, name, code: str, **kwargs) -> None:
-        super().__init__(name, **kwargs)
-        self.code = code
-
-    def runtest(self) -> None:
-        code = compile_command(self.code, filename="<doctest>", symbol="exec")
-        if code is None:
-            raise ValueError("Code is incomplete")
-        interpreter = InteractiveInterpreter()
-        interpreter.runcode(code)
-
-    # def repr_failure(
-    #     self, excinfo: ExceptionInfo[BaseException]
-    # ) -> Union[str, TerminalRepr]:
-    #     exception = excinfo.value
-    #     traceback = excinfo.traceback
-
-    #     out = exception, exception.__dict__, type(exception)
-    #     print(traceback)
-
-    #     return str(out)
-
-
-class DoctestCollector(pytest.Collector):
-    def __init__(self, name: str, data: Dict[str, Dict[int, str]], **kwargs) -> None:
-        super().__init__(name, **kwargs)
-        self.data = data
-
-    def collect(self) -> Iterable[Union["pytest.Item", "pytest.Collector"]]:
-        items = []
-        for docname, tests in self.data.items():
-            for lineno, test in tests.items():
-                item = DoctestItem.from_parent(
-                    self, name=f"{docname}:{lineno}", code=test
-                )
-                items.append(item)
-        return items
-
-
-class PytestPlugin:
-    def __init__(self, data: Dict[str, Dict[int, str]]) -> None:
-        self.data = data
-
-    def pytest_collection(self, session: pytest.Session):
-        collector = DoctestCollector.from_parent(
-            session, name="doctest-collector", data=self.data
-        )
-
-        items = collector.collect()
-
-        session.testscollected = len(items)
-        session.items = items
-
-        return session
+    for docname, tests in data.items():
+        path = outdir / f"{docname}.py"
+        path = path.with_name("test_" + path.name)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w") as f:
+            for lineno, code in tests.items():
+                f.write(f"def test_{docname}_l{lineno}():\n")
+                lines = ["    " + line for line in code.splitlines()]
+                f.write("\n".join(lines))
+                f.write("\n\n")
 
 
 def setup(app: Sphinx):
-
     app.add_transform(DoctestOxideTransform)
     app.connect("env-purge-doc", env_purge_doc_callback)
     app.connect("env-merge-info", env_merge_info_callback)
-    app.connect("build-finished", invoke_pytest_callback)
+    app.connect("build-finished", write_doctests_callback)
 
     return {
         "version": "0.1",

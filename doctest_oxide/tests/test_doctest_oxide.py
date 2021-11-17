@@ -23,11 +23,7 @@ def test_leading_spaces():
 
 
 def test_get_common_indent():
-    text = [
-        "foo",
-        "  bar",
-        "baz",
-    ]
+    text = ["foo", "  bar", "baz", ""]
 
     assert doctest_oxide.get_common_indent(*text) == 0
 
