@@ -152,7 +152,6 @@ class DoctestOxideTransform(SphinxTransform):
         visitor = TestCollectionVisitor(self.document)
         self.document.walk(visitor)
         docname = self.env.docname
-        print("updating doctests from", docname)
         self.env.doctest_oxide_data[docname] = visitor.tests
 
 
@@ -192,15 +191,12 @@ def write_doctests_callback(app: Sphinx, exception: Optional[Exception]):
 def write_doctests(app: Sphinx, outdir: Path):
     data = app.env.doctest_oxide_data
 
-    print("Writing doctests for", [key for key, val in data.items() if val])
-
     outdir.mkdir(exist_ok=True)
 
     for docname, tests in data.items():
         path = get_target_uri(outdir, docname)
         path.parent.mkdir(parents=True, exist_ok=True)
         if tests:
-            print(path)
             with path.open("w") as f:
                 for lineno, code in tests.items():
                     f.write(f"def test_{slugify(docname)}_l{lineno}():\n")
