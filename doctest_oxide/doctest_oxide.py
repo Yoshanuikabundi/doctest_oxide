@@ -34,6 +34,9 @@ def node_lang_is_python(node: docutils.nodes.literal_block) -> bool:
         "python3",
     }
 
+    if "language" not in node.attributes:
+        return False
+
     return node.attributes["language"] in python_synonyms
 
 
